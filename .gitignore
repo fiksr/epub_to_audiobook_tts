@@ -1,0 +1,18 @@
+# Output directory - audio files, epubs, work folders
+output/
+
+# Gemini's backup/experimental files - not needed in repo
+app.pyGEMINI
+app.pyOLD
+static/index.htmlGEMINI
+
+# Oracle-specific compose (keep only if you want it in repo)
+docker-compose.oracle.yml
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment / secrets
+.env

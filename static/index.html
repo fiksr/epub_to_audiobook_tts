@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TTS Converter</title>
+<style>
+  :root {
+    --bg: #0f0f0f;
+    --surface: #1a1a1a;
+    --surface2: #242424;
+    --border: #2e2e2e;
+    --accent: #e8ff47;
+    --accent2: #47c5ff;
+    --accent3: #c47fff;   /* Kokoro purple */
+    --text: #f0f0f0;
+    --muted: #888;
+    --danger: #ff4747;
+    --success: #47ff8a;
+    --radius: 8px;
+    --font: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 13px;
+    min-height: 100vh;
+    padding: 24px;
+  }
+  h1 {
+    font-size: 18px;
+    font-weight: 400;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    margin-bottom: 32px;
+    text-transform: uppercase;
+  }
+  h1 span { color: var(--muted); }
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    max-width: 960px;
+  }
+  @media (max-width: 700px) { .grid { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+  .card-title {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 16px;
+  }
+  label {
+    display: block;
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  input, select, textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 13px;
+    padding: 10px 12px;
+    outline: none;
+    transition: border-color 0.15s;
+    margin-bottom: 14px;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  input[type="password"] { letter-spacing: 0.15em; }
+  .provider-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .tab {
+    flex: 1;
+    padding: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--muted);
+    cursor: pointer;
+    text-align: center;
+    font-family: var(--font);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    transition: all 0.15s;
+  }
+  .tab.active-google { background: var(--accent2); border-color: var(--accent2); color: #000; }
+  .tab.active-edge   { background: var(--accent);  border-color: var(--accent);  color: #000; }
+  .tab.active-kokoro { background: var(--accent3); border-color: var(--accent3); color: #000; }
+  .drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 32px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-bottom: 14px;
+    color: var(--muted);
+  }
+  .drop-zone:hover, .drop-zone.dragover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(232,255,71,0.04);
+  }
+  .drop-zone.has-file {
+    border-color: var(--success);
+    color: var(--success);
+    background: rgba(71,255,138,0.04);
+  }
+  .drop-icon { font-size: 28px; margin-bottom: 8px; }
+  .drop-name { font-size: 12px; margin-top: 6px; }
+  button {
+    font-family: var(--font);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all 0.15s;
+    border: none;
+    padding: 10px 16px;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #000;
+    width: 100%;
+    padding: 12px;
+    font-size: 13px;
+  }
+  .btn-primary:hover { opacity: 0.9; }
+  .btn-primary:disabled { opacity: 0.3; cursor: not-allowed; }
+  .btn-sm {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 11px;
+    padding: 8px 12px;
+  }
+  .btn-sm:hover { border-color: var(--accent2); color: var(--accent2); }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-danger:hover { opacity: 0.85; }
+  .btn-success { background: var(--success); color: #000; }
+  .controls-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .controls-row button { flex: 1; }
+  .progress-wrap { margin-top: 16px; }
+  .progress-bar-bg {
+    background: var(--surface2);
+    border-radius: 4px;
+    height: 6px;
+    overflow: hidden;
+    margin: 8px 0;
+  }
+  .progress-bar {
+    background: var(--accent);
+    height: 100%;
+    width: 0%;
+    transition: width 0.5s ease;
+    border-radius: 4px;
+  }
+  .progress-bar.merging { background: var(--accent2); }
+  .progress-bar.done { background: var(--success); }
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .status-text {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 6px;
+    min-height: 18px;
+    word-break: break-all;
+  }
+  .status-text.error { color: var(--danger); }
+  .status-text.done { color: var(--success); }
+  .preview-section { margin-top: 16px; }
+  .preview-section textarea {
+    resize: vertical;
+    min-height: 70px;
+    margin-bottom: 8px;
+  }
+  .preview-row { display: flex; gap: 8px; align-items: flex-start; }
+  .preview-row button { flex-shrink: 0; }
+  audio {
+    width: 100%;
+    margin-top: 10px;
+    filter: invert(1) hue-rotate(180deg);
+    border-radius: var(--radius);
+  }
+  .api-key-wrap { position: relative; }
+  .api-key-wrap input { padding-right: 40px; }
+  .eye-btn {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  .lang-filter { margin-bottom: 8px; }
+  .badge {
+    display: inline-block;
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 20px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+  .badge-google { background: rgba(71,197,255,0.15); color: var(--accent2); }
+  .badge-edge   { background: rgba(232,255,71,0.15);  color: var(--accent); }
+  .badge-kokoro { background: rgba(196,127,255,0.15); color: var(--accent3); }
+  select option { background: #1a1a1a; }
+  .full-width { grid-column: 1 / -1; }
+  .char-count { font-size: 11px; color: var(--muted); margin-top: -10px; margin-bottom: 14px; }
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .slider-row input[type="range"] {
+    flex: 1;
+    margin-bottom: 0;
+    padding: 0;
+    height: 4px;
+    accent-color: var(--accent);
+    cursor: pointer;
+    background: var(--surface2);
+    border: none;
+    border-radius: 2px;
+  }
+  .slider-val {
+    min-width: 38px;
+    text-align: right;
+    color: var(--accent);
+    font-size: 12px;
+  }
+  .format-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .fmt-btn {
+    flex: 1;
+    padding: 9px;
+    background: var(--surface2);
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius);
+    color: var(--muted);
+    cursor: pointer;
+    text-align: center;
+    font-family: var(--font);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    transition: all 0.15s;
+  }
+  .fmt-btn.active { background: var(--accent2); border-color: var(--accent2) !important; color: #000; }
+  .info-box {
+    background: rgba(196,127,255,0.07);
+    border: 1px solid rgba(196,127,255,0.2);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    font-size: 11px;
+    color: var(--accent3);
+    margin-bottom: 14px;
+    line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+
+<h1>TTS <span>//</span> Audiobook Converter</h1>
+
+<div class="grid">
+
+  <!-- LEFT: Config -->
+  <div>
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title">Provider</div>
+      <div class="provider-tabs">
+        <button class="tab" id="tab-google" onclick="setProvider('google')">Google Chirp</button>
+        <button class="tab" id="tab-edge"   onclick="setProvider('edge')">Edge TTS</button>
+        <button class="tab" id="tab-kokoro" onclick="setProvider('kokoro')">Kokoro</button>
+      </div>
+
+      <!-- Google key -->
+      <div id="google-key-section" style="display:none">
+        <label>API Key</label>
+        <div class="api-key-wrap">
+          <input type="password" id="api-key" placeholder="AIza..." oninput="saveKey()">
+          <button class="eye-btn" onclick="toggleKey()">👁</button>
+        </div>
+      </div>
+
+      <!-- Kokoro info -->
+      <div id="kokoro-info" style="display:none">
+        <div class="info-box">
+          🔮 <strong>Kokoro</strong> runs locally via the sidecar container.<br>
+          English voices only. No API key needed.
+        </div>
+      </div>
+
+      <label>Language Filter</label>
+      <input type="text" id="lang-filter" class="lang-filter" placeholder="e.g. hr, en, sr" oninput="filterVoices()">
+
+      <label>Voice</label>
+      <select id="voice-select" size="6" style="height:140px; margin-bottom:8px"></select>
+      <button class="btn-sm" style="width:100%;margin-bottom:14px" onclick="loadVoices()">↻ Load Voices</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Preview</div>
+      <div class="preview-section">
+        <textarea id="preview-text" placeholder="Type text to preview selected voice...">The quick brown fox jumps over the lazy dog.</textarea>
+        <div class="preview-row">
+          <button class="btn-sm" onclick="doPreview()" id="preview-btn">▶ Preview</button>
+        </div>
+        <audio id="preview-audio" controls style="display:none"></audio>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Convert -->
+  <div>
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title">Book</div>
+      <div class="drop-zone" id="drop-zone" onclick="document.getElementById('epub-input').click()">
+        <div class="drop-icon">📚</div>
+        <div>Drop epub here or click to browse</div>
+        <div class="drop-name" id="drop-name"></div>
+      </div>
+      <input type="file" id="epub-input" accept=".epub,.mobi" style="display:none" onchange="fileSelected(this)">
+      <div class="char-count" id="char-count"></div>
+
+      <label>Speed</label>
+      <div class="slider-row">
+        <input type="range" id="speed-slider" min="0.5" max="2.0" step="0.05" value="1.0" oninput="updateSpeed(this.value)">
+        <span class="slider-val" id="speed-val">1.0×</span>
+      </div>
+
+      <label>Output Format</label>
+      <div class="format-row">
+        <button class="fmt-btn active" id="fmt-m4b" onclick="setFormat('m4b')">M4B</button>
+        <button class="fmt-btn" id="fmt-mp3" onclick="setFormat('mp3')">MP3</button>
+      </div>
+
+      <button class="btn-primary" id="convert-btn" onclick="startConvert()" disabled>Convert to Audiobook</button>
+
+      <div class="controls-row" id="controls-row" style="display:none">
+        <button class="btn-sm" id="pause-btn" onclick="togglePause()">⏸ Pause</button>
+        <button class="btn-sm btn-danger" onclick="stopConvert()">■ Stop</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Progress</div>
+      <div class="progress-wrap">
+        <div class="progress-label">
+          <span id="progress-status">Idle</span>
+          <span id="progress-pct">—</span>
+        </div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar" id="progress-bar"></div>
+        </div>
+        <div class="status-text" id="status-text">Ready to convert.</div>
+      </div>
+
+      <div id="download-section" style="display:none; margin-top:16px">
+        <button class="btn-success" style="width:100%" onclick="downloadFile()">↓ Download <span id="dl-fmt-label">.m4b</span></button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let provider = 'google';
+let allVoices = [];
+let selectedFile = null;
+let statusInterval = null;
+let currentSpeed = 1.0;
+let currentFormat = 'm4b';
+
+function setProvider(p) {
+  provider = p;
+  ['google','edge','kokoro'].forEach(id => {
+    const tab = document.getElementById('tab-' + id);
+    tab.className = 'tab' + (p === id ? ' active-' + id : '');
+  });
+  document.getElementById('google-key-section').style.display = p === 'google' ? 'block' : 'none';
+  document.getElementById('kokoro-info').style.display = p === 'kokoro' ? 'block' : 'none';
+  allVoices = [];
+  document.getElementById('voice-select').innerHTML = '<option disabled>Click "Load Voices"</option>';
+  const lf = document.getElementById('lang-filter');
+  if (p === 'kokoro') lf.placeholder = 'e.g. en (Kokoro is English only)';
+  else lf.placeholder = 'e.g. hr, en, sr';
+}
+
+function updateSpeed(val) {
+  currentSpeed = parseFloat(val);
+  document.getElementById('speed-val').textContent = currentSpeed.toFixed(2) + '×';
+}
+
+function setFormat(fmt) {
+  currentFormat = fmt;
+  ['m4b', 'mp3'].forEach(f => {
+    document.getElementById('fmt-' + f).className = 'fmt-btn' + (f === fmt ? ' active' : '');
+  });
+  document.getElementById('dl-fmt-label').textContent = '.' + fmt;
+}
+
+function saveKey() {
+  localStorage.setItem('google_api_key', document.getElementById('api-key').value);
+}
+
+function toggleKey() {
+  const el = document.getElementById('api-key');
+  el.type = el.type === 'password' ? 'text' : 'password';
+}
+
+window.onload = () => {
+  setProvider('google');
+  setFormat('m4b');
+  const k = localStorage.getItem('google_api_key');
+  if (k) document.getElementById('api-key').value = k;
+};
+
+async function loadVoices() {
+  const sel = document.getElementById('voice-select');
+  sel.innerHTML = '<option disabled>Loading...</option>';
+  const body = { provider };
+  if (provider === 'google') body.api_key = document.getElementById('api-key').value;
+  try {
+    const r = await fetch('/voices', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    const data = await r.json();
+    if (data.error) { sel.innerHTML = `<option disabled>${data.error}</option>`; return; }
+    allVoices = data;
+    filterVoices();
+  } catch(e) {
+    sel.innerHTML = `<option disabled>Error: ${e.message}</option>`;
+  }
+}
+
+function filterVoices() {
+  const filter = document.getElementById('lang-filter').value.toLowerCase();
+  const sel = document.getElementById('voice-select');
+  const filtered = filter
+    ? allVoices.filter(v => v.lang.toLowerCase().includes(filter) || v.name.toLowerCase().includes(filter))
+    : allVoices;
+  sel.innerHTML = filtered.map(v =>
+    `<option value="${v.name}">${v.name}${v.lang ? ' (' + v.lang + ')' : ''} ${v.gender || ''}</option>`
+  ).join('');
+}
+
+const dz = document.getElementById('drop-zone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+dz.addEventListener('drop', e => {
+  e.preventDefault();
+  dz.classList.remove('dragover');
+  const f = e.dataTransfer.files[0];
+  if (f) setFile(f);
+});
+
+function fileSelected(input) {
+  if (input.files[0]) setFile(input.files[0]);
+}
+
+function setFile(f) {
+  selectedFile = f;
+  dz.classList.add('has-file');
+  document.getElementById('drop-name').textContent = f.name;
+  document.getElementById('char-count').textContent = `File size: ${(f.size / 1024).toFixed(0)} KB`;
+  document.getElementById('convert-btn').disabled = false;
+}
+
+async function doPreview() {
+  const voice = document.getElementById('voice-select').value;
+  if (!voice) return alert('Select a voice first');
+  const text = document.getElementById('preview-text').value;
+  const btn = document.getElementById('preview-btn');
+  btn.textContent = '⏳ Loading...';
+  btn.disabled = true;
+  const body = { provider, voice, text, speed: currentSpeed };
+  if (provider === 'google') body.api_key = document.getElementById('api-key').value;
+  try {
+    const r = await fetch('/preview', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    if (!r.ok) { alert('Preview failed: ' + await r.text()); return; }
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const audio = document.getElementById('preview-audio');
+    audio.src = url;
+    audio.style.display = 'block';
+    audio.play();
+  } finally {
+    btn.textContent = '▶ Preview';
+    btn.disabled = false;
+  }
+}
+
+async function startConvert() {
+  if (!selectedFile) return;
+  const voice = document.getElementById('voice-select').value;
+  if (!voice) return alert('Select a voice first');
+
+  const fd = new FormData();
+  fd.append('epub', selectedFile);
+  fd.append('provider', provider);
+  fd.append('voice', voice);
+  fd.append('speed', currentSpeed);
+  fd.append('format', currentFormat);
+  if (provider === 'google') fd.append('api_key', document.getElementById('api-key').value);
+
+  document.getElementById('convert-btn').disabled = true;
+  document.getElementById('controls-row').style.display = 'flex';
+  document.getElementById('download-section').style.display = 'none';
+
+  await fetch('/convert', { method: 'POST', body: fd });
+  statusInterval = setInterval(pollStatus, 1500);
+}
+
+async function pollStatus() {
+  const r = await fetch('/status');
+  const s = await r.json();
+  const pct = s.total > 0 ? Math.round((s.progress / s.total) * 100) : 0;
+  const bar = document.getElementById('progress-bar');
+  bar.style.width = pct + '%';
+  bar.className = 'progress-bar' + (s.status === 'merging' ? ' merging' : '') + (s.status === 'done' ? ' done' : '');
+  document.getElementById('progress-pct').textContent = s.total > 0 ? `${s.progress}/${s.total}` : '—';
+  document.getElementById('progress-status').textContent = s.status.toUpperCase();
+  const st = document.getElementById('status-text');
+  st.textContent = s.current_chunk;
+  st.className = 'status-text' + (s.status === 'error' ? ' error' : '') + (s.status === 'done' ? ' done' : '');
+
+  if (s.status === 'done') {
+    clearInterval(statusInterval);
+    document.getElementById('download-section').style.display = 'block';
+    document.getElementById('controls-row').style.display = 'none';
+    document.getElementById('convert-btn').disabled = false;
+  }
+  if (s.status === 'error' || s.status === 'stopped') {
+    clearInterval(statusInterval);
+    document.getElementById('controls-row').style.display = 'none';
+    document.getElementById('convert-btn').disabled = false;
+  }
+}
+
+async function togglePause() {
+  const r = await fetch('/pause', { method: 'POST' });
+  const d = await r.json();
+  document.getElementById('pause-btn').textContent = d.paused ? '▶ Resume' : '⏸ Pause';
+}
+
+async function stopConvert() {
+  await fetch('/stop', { method: 'POST' });
+  clearInterval(statusInterval);
+  document.getElementById('controls-row').style.display = 'none';
+  document.getElementById('convert-btn').disabled = false;
+}
+
+function downloadFile() {
+  window.location.href = '/download';
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+
+  tts:
+    build: .
+    ports:
+      - "5001:5000"
+    volumes:
+      - ./output:/output
+    environment:
+      - KOKORO_URL=http://kokoro:8880
+    depends_on:
+      - kokoro
+    restart: unless-stopped
+    # Limit CPU usage for the Flask app (leave headroom for Kokoro)
+    deploy:
+      resources:
+        limits:
+          cpus: "4"        # change to taste
+          memory: 2048M
+
+  kokoro:
+    image: ghcr.io/remsky/kokoro-fastapi-cpu:latest
+    ports:
+      - "8880:8880"       # optional – expose if you want direct access
+    environment:
+      - PYTHONUNBUFFERED=1
+      - API_LOG_LEVEL=WARNING
+      # Kokoro uses PyTorch CPU; cap its thread count so it doesn't eat all cores
+      - OMP_NUM_THREADS=4       # OpenMP threads used by BLAS/PyTorch
+      - MKL_NUM_THREADS=4       # MKL (if present)
+      - TORCH_NUM_THREADS=4     # PyTorch intra-op threads
+      # Kokoro-FastAPI worker/concurrency settings
+      - MAX_WORKERS=1           # one synthesis worker is plenty for CPU
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "4"        # hard cap – adjust to how many cores you want Kokoro to use
+          memory: 4G
